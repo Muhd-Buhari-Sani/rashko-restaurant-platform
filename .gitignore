@@ -1,0 +1,30 @@
+# Environment files: these hold real secrets (database URL, JWT secret,
+# payment keys). Never commit them; copy the .env.example files instead.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build output
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# Runtime data: images uploaded through the admin dashboard.
+# The images that existed when this repository was created were committed
+# once as a backup; anything uploaded from now on is ignored.
+server/uploads/
+
+# Logs and test output
+*.log
+coverage/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini

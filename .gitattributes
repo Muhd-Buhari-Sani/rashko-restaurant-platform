@@ -1,0 +1,16 @@
+# Normalise line endings: LF inside the repository, native on checkout.
+# Without this, Windows (CRLF) and the Linux build/deploy host (LF) would
+# rewrite every file on each commit.
+* text=auto
+
+# Binary assets: never convert or diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Generated files: keep them out of diffs and language stats.
+package-lock.json linguist-generated=true -diff
