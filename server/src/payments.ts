@@ -33,7 +33,7 @@ const paystack: Provider = {
       headers: { Authorization: `Bearer ${config.paystackSecret}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email, amount: amount * 100, reference, currency: 'NGN',
-        callback_url: `${config.appUrl}/order/${orderCode}`, metadata: { orderCode },
+        callback_url: `${config.appUrl}/order/${orderCode}?ref=${encodeURIComponent(reference)}`, metadata: { orderCode },
       }),
     })
     const j: any = await r.json().catch(() => ({}))

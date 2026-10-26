@@ -39,6 +39,13 @@ Orders, payments, order tracking, the admin dashboard and WhatsApp notifications
 by `../server` (see `../server/README.md`). Locally the payment provider is `mock`: checkout
 records an order but no money moves.
 
+Checkout flow: `/checkout` creates the order and sends the browser to `/pay/mock?reference=…`,
+where "Pay" or "Simulate a failed payment" finishes the test payment. Either way you land on
+`/order/:code`, which shows the confirmation, payment state and status timeline. Without a
+reference the same page asks for the phone number used at checkout, and `/order` is the manual
+tracking form. With `PAYMENT_PROVIDER=paystack` the provider's page replaces `/pay/mock`, and the
+`?ref=…` on the callback URL lets the order page verify the payment when the browser returns.
+
 ## Still to do
 - Reservations and the policy pages are not built.
 - Dish photos: `public/images/dishes/<slug>.jpg` is used automatically when the API has no

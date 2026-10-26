@@ -58,7 +58,7 @@ pub.post('/orders', orderLimit, async (req, res) => {
 async function trackable(code: string, phone: string) {
   const o = await one<any>(
     `select o.id, o.code, o.type, o.status, o.payment_status "paymentStatus", o.subtotal, o.delivery_fee "deliveryFee", o.total,
-            o.created_at "createdAt", o.customer_phone, b.name branch
+            o.created_at "createdAt", o.delivery_address "deliveryAddress", o.customer_phone, b.name branch
        from orders o join branches b on b.id = o.branch_id where o.code = $1`, [code.toUpperCase()])
   let p: string | null = null
   try { p = normalizePhone(phone) } catch { /* treated as a miss below */ }

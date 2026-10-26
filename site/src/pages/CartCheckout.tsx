@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowIcon, MinusIcon, PinIcon, PlusIcon, Reveal, Star, TrashIcon } from '../components/ui'
 import { naira } from '../data'
 import { useStore } from '../store'
 import { api, ApiError } from '../api'
+import { rememberOrder } from '../orderMemory'
 
 function Empty() {
   return (
@@ -81,7 +82,24 @@ export function Checkout() {
   const [shake, setShake] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [freeAbove, setFreeAbove] = useState<number | null>(null)
+
+  // Same rule the server applies, so the price shown before paying matches the charge.
+  useEffect(() => {
+    let live = true
+    api<{ delivery: { freeAbove: number | null } }>('/settings')
+      .then((s) => { if (live) setFreeAbove(s.delivery.freeAbove) })
+      .catch(() => { /* the server is still the authority on the fee */ })
+    return () => { live = false }
+  }, [])
+
   if (lines.length === 0) return <Empty />
+
+  const deliveryFee =
+    mode !== 'delivery' ? 0 : branch?.deliveryFee != null
+      ? (freeAbove !== null && subtotal >= freeAbove ? 0 : branch.deliveryFee)
+      : null
+  const total = deliveryFee === null ? null : subtotal + deliveryFee
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -109,6 +127,7 @@ export function Checkout() {
           items: lines.map((l) => ({ slug: l.slug, qty: l.qty })),
         },
       })
+      rememberOrder({ code: order.code, phone, reference: order.payment.reference, total: order.total })
       clear()
       window.location.href = order.payment.url
     } catch (err) {
@@ -138,7 +157,7 @@ export function Checkout() {
               >
                 {m}
                 <span className="mt-1 block text-xs font-normal normal-case text-moss/70">
-                  {m === 'pickup' ? `Collect from ${branch?.name ?? 'the branch'}` : 'Delivery fee confirmed at checkout'}
+                  {m === 'pickup' ? `Collect from ${branch?.name ?? 'the branch'}` : branch?.deliveryFee != null ? `${naira(branch.deliveryFee)} delivery` : 'Delivery fee confirmed at checkout'}
                 </span>
               </button>
             ))}
@@ -170,7 +189,7 @@ export function Checkout() {
 
         <div>
           <button type="submit" disabled={busy} className={`btn btn-primary w-full !py-4 text-base disabled:opacity-60 ${shake ? 'shake' : 'pulse-ring'}`}>
-            {busy ? 'Placing your order…' : `Pay ${naira(subtotal)} online`}
+            {busy ? 'Placing your order…' : `Pay ${naira(total ?? subtotal)}${total === null ? '+' : ''} online`}
           </button>
           {error && (
             <p role="alert" className="pop-in mt-4 rounded-2xl bg-red-50 p-4 text-sm leading-relaxed text-red-700">{error}</p>
@@ -195,10 +214,10 @@ export function Checkout() {
         </ul>
         <div className="mt-5 space-y-2 border-t border-ink/15 pt-4 text-sm">
           <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{naira(subtotal)}</span></div>
-          <div className="flex justify-between text-moss/70"><span>Delivery fee</span><span>{mode === 'delivery' ? 'Added at checkout' : 'None'}</span></div>
+          <div className="flex justify-between text-moss/70"><span>Delivery fee</span><span>{deliveryFee === null ? 'Confirmed at checkout' : naira(deliveryFee)}</span></div>
           <div className="flex items-baseline justify-between pt-2">
             <span className="font-semibold">Total due</span>
-            <span className="font-display text-3xl font-semibold tabular-nums">{naira(subtotal)}+</span>
+            <span className="font-display text-3xl font-semibold tabular-nums">{naira(total ?? subtotal)}{total === null ? '+' : ''}</span>
           </div>
         </div>
       </aside>

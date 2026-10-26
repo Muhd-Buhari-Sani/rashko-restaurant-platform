@@ -15,6 +15,9 @@ export interface Branch {
   hasMenu: boolean
   pickupEnabled: boolean
   deliveryEnabled: boolean
+  /** null = the fee has not been set, so delivery is refused by the server. */
+  deliveryFee: number | null
+  minOrder: number
 }
 
 export interface MenuItem {
