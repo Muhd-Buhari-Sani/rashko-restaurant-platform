@@ -175,8 +175,7 @@ export function MockPayment() {
               </p>
             )}
             <p className="mt-5 text-center text-xs text-moss/60">
-              In production this redirects to Paystack. Set <span className="font-mono">PAYMENT_PROVIDER=paystack</span>{' '}
-              and a test secret key to try that instead.
+              Add a Paystack secret key to the server's <span className="font-mono">.env</span> to take real card payments.
             </p>
           </>
         )}

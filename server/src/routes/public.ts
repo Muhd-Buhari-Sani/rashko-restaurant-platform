@@ -42,7 +42,13 @@ pub.get('/branches/:slug/menu', async (req, res) => {
 
 pub.get('/settings', async (_req, res) => {
   const s = await getSettings()
-  res.json({ restaurant: s.restaurant, delivery: { freeAbove: s.delivery.freeAbove } })
+  // Only public facts about payments — never the key. The site uses this to ask for an
+  // email when Paystack needs one and to label the checkout honestly.
+  res.json({
+    restaurant: s.restaurant,
+    delivery: { freeAbove: s.delivery.freeAbove },
+    payments: { provider: config.paymentProvider, testMode: config.paymentTestMode },
+  })
 })
 
 pub.post('/orders', orderLimit, async (req, res) => {

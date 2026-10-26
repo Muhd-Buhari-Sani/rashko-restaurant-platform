@@ -25,36 +25,54 @@ const mock: Provider = {
   },
 }
 
-const paystack: Provider = {
-  name: 'paystack',
-  async init({ reference, amount, email, orderCode }) {
-    const r = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${config.paystackSecret}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email, amount: amount * 100, reference, currency: 'NGN',
-        callback_url: `${config.appUrl}/order/${orderCode}?ref=${encodeURIComponent(reference)}`, metadata: { orderCode },
-      }),
-    })
-    const j: any = await r.json().catch(() => ({}))
-    if (!r.ok || !j.status) throw new Error(`Paystack initialize failed: ${j.message ?? r.status}`)
-    return { authorizationUrl: j.data.authorization_url }
-  },
-  async verify(reference) {
-    const r = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${config.paystackSecret}` },
-    })
-    const j: any = await r.json().catch(() => ({}))
-    if (!r.ok || !j.status) return { status: 'pending', amount: 0, raw: j }
-    const s = j.data.status
-    return {
-      status: s === 'success' ? 'success' : s === 'failed' ? 'failed' : s === 'abandoned' ? 'abandoned' : 'pending',
-      amount: Math.round(j.data.amount / 100), channel: j.data.channel, raw: j.data,
-    }
-  },
+/** Exported so the HTTP contract can be tested against a stub server. */
+export const paystackProvider = (secret: string, base = 'https://api.paystack.co'): Provider => {
+  const api = base.replace(/\/+$/, '')
+  return {
+    name: 'paystack',
+    async init({ reference, amount, email, orderCode }) {
+      const r = await fetch(`${api}/transaction/initialize`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email, amount: amount * 100, reference, currency: 'NGN',
+          callback_url: `${config.appUrl}/order/${orderCode}?ref=${encodeURIComponent(reference)}`, metadata: { orderCode },
+        }),
+      })
+      const j: any = await r.json().catch(() => ({}))
+      if (!r.ok || !j.status) throw new Error(`Paystack initialize failed (${r.status}): ${j.message ?? 'no message'}`)
+      return { authorizationUrl: j.data.authorization_url }
+    },
+    async verify(reference) {
+      let r: Response
+      try {
+        r = await fetch(`${api}/transaction/verify/${encodeURIComponent(reference)}`, {
+          headers: { Authorization: `Bearer ${secret}` },
+        })
+      } catch {
+        // Paystack being unreachable must not 500 the page a customer returns to: the
+        // payment stays pending, and the webhook (or a later refresh) can settle it.
+        return { status: 'pending', amount: 0, raw: { error: 'Paystack unreachable' } }
+      }
+      const j: any = await r.json().catch(() => ({}))
+      if (!r.ok || !j.status) return { status: 'pending', amount: 0, raw: j }
+      const s = j.data.status
+      return {
+        status: s === 'success' ? 'success'
+          : s === 'failed' || s === 'reversed' ? 'failed'
+            : s === 'abandoned' ? 'abandoned'
+              : 'pending',
+        amount: Math.round(Number(j.data.amount) / 100) || 0,
+        channel: j.data.channel,
+        raw: j.data,
+      }
+    },
+  }
 }
 
-export const provider: Provider = config.paymentProvider === 'paystack' ? paystack : mock
+export const provider: Provider = config.paymentProvider === 'paystack'
+  ? paystackProvider(config.paystackSecret, config.paystackApiBase)
+  : mock
 
 export const newReference = () => 'RSK' + randomUUID().replace(/-/g, '').slice(0, 20).toUpperCase()
 

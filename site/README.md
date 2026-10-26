@@ -43,8 +43,10 @@ Checkout flow: `/checkout` creates the order and sends the browser to `/pay/mock
 where "Pay" or "Simulate a failed payment" finishes the test payment. Either way you land on
 `/order/:code`, which shows the confirmation, payment state and status timeline. Without a
 reference the same page asks for the phone number used at checkout, and `/order` is the manual
-tracking form. With `PAYMENT_PROVIDER=paystack` the provider's page replaces `/pay/mock`, and the
-`?ref=…` on the callback URL lets the order page verify the payment when the browser returns.
+tracking form. Adding a Paystack secret key to `../server/.env` switches checkout to Paystack's
+own page (test key = test mode, live key = live payments) and the `?ref=…` on the callback URL
+lets the order page verify the payment when the browser returns. Checkout asks for an email
+whenever Paystack is active, because Paystack needs one for the receipt.
 
 ## Still to do
 - Reservations and the policy pages are not built.

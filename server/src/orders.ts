@@ -3,7 +3,6 @@ import { one, q, tx } from './db.ts'
 import { HttpError, normalizePhone, orderCode } from './util.ts'
 import { getSettings } from './settings.ts'
 import { newReference, provider } from './payments.ts'
-import { config } from './config.ts'
 import { broadcast } from './events.ts'
 
 export const createOrderSchema = z.object({
@@ -25,6 +24,12 @@ export const createOrderSchema = z.object({
  */
 export async function createOrder(input: z.infer<typeof createOrderSchema>) {
   const phone = normalizePhone(input.customer.phone)
+  const email = input.customer.email?.trim() || null
+  // Paystack builds the receipt from this address, and its API rejects an empty one.
+  // Asking here gives the customer a clear message instead of a provider error at the end.
+  if (provider.name === 'paystack' && !email) {
+    throw new HttpError(400, 'Please add an email address so Paystack can send your payment receipt.')
+  }
   const settings = await getSettings()
 
   const created = await tx(async (c) => {
@@ -64,7 +69,6 @@ export async function createOrder(input: z.infer<typeof createOrderSchema>) {
     }
     const total = subtotal + fee
 
-    const email = input.customer.email || null
     const cust = await one<any>(
       `insert into customers(name, phone, email) values ($1,$2,$3)
        on conflict (phone) do update set name = excluded.name, email = coalesce(excluded.email, customers.email)
@@ -92,7 +96,7 @@ export async function createOrder(input: z.infer<typeof createOrderSchema>) {
   try {
     const { authorizationUrl } = await provider.init({
       reference, amount: created.total, orderCode: created.code,
-      email: input.customer.email || config.paymentFallbackEmail,
+      email: email ?? '',
     })
     return { ...created, payment: { reference, authorizationUrl } }
   } catch (e) {

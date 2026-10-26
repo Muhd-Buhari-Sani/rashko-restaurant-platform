@@ -83,17 +83,21 @@ export function Checkout() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [freeAbove, setFreeAbove] = useState<number | null>(null)
+  const [payments, setPayments] = useState<{ provider: 'mock' | 'paystack'; testMode: boolean } | null>(null)
 
   // Same rule the server applies, so the price shown before paying matches the charge.
+  // The payment mode decides whether an email is required and how checkout is labelled.
   useEffect(() => {
     let live = true
-    api<{ delivery: { freeAbove: number | null } }>('/settings')
-      .then((s) => { if (live) setFreeAbove(s.delivery.freeAbove) })
+    api<{ delivery: { freeAbove: number | null }; payments?: { provider: 'mock' | 'paystack'; testMode: boolean } }>('/settings')
+      .then((s) => { if (live) { setFreeAbove(s.delivery.freeAbove); setPayments(s.payments ?? null) } })
       .catch(() => { /* the server is still the authority on the fee */ })
     return () => { live = false }
   }, [])
 
   if (lines.length === 0) return <Empty />
+
+  const paystack = payments?.provider === 'paystack'
 
   const deliveryFee =
     mode !== 'delivery' ? 0 : branch?.deliveryFee != null
@@ -172,8 +176,16 @@ export function Checkout() {
           <label className="block text-sm font-semibold">Phone number
             <input required type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08012345678" className={`${field} mt-1.5 font-normal`} />
           </label>
-          <label className="block text-sm font-semibold">Email (optional)
-            <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${field} mt-1.5 font-normal`} />
+          <label className="block text-sm font-semibold">Email {paystack ? '' : '(optional)'}
+            <input
+              type="email"
+              autoComplete="email"
+              required={paystack}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`${field} mt-1.5 font-normal`}
+            />
+            {paystack && <span className="mt-1 block text-xs font-normal text-moss/60">Paystack sends your payment receipt here.</span>}
           </label>
           {mode === 'delivery' && (
             <>
@@ -189,11 +201,18 @@ export function Checkout() {
 
         <div>
           <button type="submit" disabled={busy} className={`btn btn-primary w-full !py-4 text-base disabled:opacity-60 ${shake ? 'shake' : 'pulse-ring'}`}>
-            {busy ? 'Placing your order…' : `Pay ${naira(total ?? subtotal)}${total === null ? '+' : ''} online`}
+            {busy ? 'Placing your order…' : `Pay ${naira(total ?? subtotal)}${total === null ? '+' : ''} ${paystack ? 'with Paystack' : 'online'}`}
           </button>
           {error && (
             <p role="alert" className="pop-in mt-4 rounded-2xl bg-red-50 p-4 text-sm leading-relaxed text-red-700">{error}</p>
           )}
+          <p className="mt-3 text-center text-xs text-moss/60">
+            {paystack
+              ? payments?.testMode
+                ? 'Paystack test mode — use a test card. No real money moves.'
+                : 'Secure card payment by Paystack.'
+              : 'Demo mode — no card is charged.'}
+          </p>
           <p className="mt-4 text-center text-xs text-moss/60">
             Already placed an order?{' '}
             <button type="button" onClick={() => navigate('/order')} className="font-semibold text-brand-dark hover:underline">Track it here</button>
