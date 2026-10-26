@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { naira, TBC } from '../data'
 import { prefersReduced } from '../hooks'
+import { useRestaurant } from '../live'
 import { useStore } from '../store'
 import {
   ArrowIcon,
@@ -358,6 +359,8 @@ function Toast() {
 }
 
 function Footer() {
+  const restaurant = useRestaurant()
+  const tel = restaurant.phone?.replace(/[^\d+]/g, '') ?? ''
   return (
     <footer className="pattern-light relative overflow-hidden bg-ink text-sand">
       <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 md:grid-cols-4 md:px-8">
@@ -382,14 +385,19 @@ function Footer() {
         <div>
           <h3 className="font-sans text-xs font-semibold uppercase tracking-[0.25em] text-mint">Zoo Road branch</h3>
           <address className="mt-4 space-y-2.5 not-italic">
-            <p>7B Zoo Road, Albasa, Kano 700103</p>
-            <p><a href="tel:+2348088038055" className="transition hover:text-ivory">+234 808 803 8055</a></p>
-            <p>Daily, 12:00 PM – 11:00 PM</p>
+            {restaurant.address && <p>{restaurant.address}</p>}
+            {restaurant.phone && (
+              <p><a href={`tel:${tel}`} className="transition hover:text-ivory">{restaurant.phone}</a></p>
+            )}
+            {restaurant.email && (
+              <p><a href={`mailto:${restaurant.email}`} className="break-all transition hover:text-ivory">{restaurant.email}</a></p>
+            )}
+            {restaurant.hours && <p>{restaurant.hours}</p>}
           </address>
         </div>
       </div>
       <div className="border-t border-sand/15 px-5 py-5 text-center text-xs text-sand/60">
-        © {YEAR} Rashko Restaurant.
+        © {YEAR} {restaurant.name}.
       </div>
     </footer>
   )

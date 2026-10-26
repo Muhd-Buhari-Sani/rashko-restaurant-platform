@@ -263,6 +263,9 @@ export function OrderPage() {
   const [checked, setChecked] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phone, setPhone] = useState(() => recallOrder(code)?.phone ?? '')
+  // Only a phone the server accepted starts the auto-refresh, so a typo cannot cause
+  // a failing request every few seconds.
+  const [activePhone, setActivePhone] = useState('')
 
   useEffect(() => {
     if (!code) return
@@ -284,7 +287,10 @@ export function OrderPage() {
       }
       try {
         const data = await api<Track>(`/orders/track/${encodeURIComponent(code)}?phone=${encodeURIComponent(known)}`)
-        if (live) setOrder(data)
+        if (live) {
+          setOrder(data)
+          setActivePhone(known)
+        }
       } catch (e) {
         if (live) setError(e instanceof ApiError ? e.message : 'Could not load that order. Please try again.')
       } finally {
@@ -299,6 +305,37 @@ export function OrderPage() {
       live = false
     }
   }, [code, reference, tick])
+
+  // The kitchen moves the order along while the customer is still on this page. Poll
+  // quietly (15s, paused in background tabs) instead of asking them to press Refresh.
+  useEffect(() => {
+    if (!code || !activePhone) return
+    let live = true
+    let timer = 0
+    let done = false
+
+    const poll = async () => {
+      if (document.visibilityState === 'hidden') return
+      try {
+        const data = await api<Track>(`/orders/track/${encodeURIComponent(code)}?phone=${encodeURIComponent(activePhone)}`)
+        if (!live) return
+        setOrder((prev) =>
+          prev && prev.status === data.status && prev.paymentStatus === data.paymentStatus && prev.events.length === data.events.length
+            ? prev
+            : data)
+        if (data.status === 'completed' || data.status === 'cancelled') done = true
+      } catch {
+        // Transient network problem: keep showing the last known state and try again.
+      }
+      if (live && !done) timer = window.setTimeout(poll, 15_000)
+    }
+
+    timer = window.setTimeout(poll, 15_000)
+    return () => {
+      live = false
+      window.clearTimeout(timer)
+    }
+  }, [code, activePhone])
 
   if (!code) return <TrackStart />
 
@@ -421,11 +458,25 @@ export function OrderPage() {
 
       {order && stepIndex >= 0 && (
         <section className="mt-6 rounded-3xl bg-white p-6 ring-1 ring-ink/5 md:p-7">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p role="status" aria-live="polite" className="sr-only">
+            Order status: {label(order.status)}
+          </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <h2 className="font-display text-2xl font-semibold">Order status</h2>
-            <span className="inline-flex items-center gap-1.5 text-xs text-moss/60">
-              <ClockIcon className="h-3.5 w-3.5" /> Placed {fmt(order.createdAt)}
-            </span>
+            <div className="text-right text-xs text-moss/60">
+              <p className="inline-flex items-center gap-1.5">
+                <ClockIcon className="h-3.5 w-3.5" /> Placed {fmt(order.createdAt)}
+              </p>
+              {order.status !== 'completed' && order.status !== 'cancelled' && (
+                <p className="mt-1 inline-flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+                  </span>
+                  Updates automatically
+                </p>
+              )}
+            </div>
           </div>
           <ol className="mt-5">
             {steps.map((s, i) => {

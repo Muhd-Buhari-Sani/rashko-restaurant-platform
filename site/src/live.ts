@@ -125,5 +125,54 @@ export function useBranchMenu(slug: string | null | undefined) {
 export const findItem = (menu: Menu | null, slug: string | undefined): MenuItem | null =>
   menu?.categories.flatMap((c) => c.items).find((i) => i.slug === slug) ?? null
 
+export interface Restaurant {
+  name: string
+  phone: string | null
+  email: string | null
+  address: string | null
+  hours: string | null
+}
+
+// Shown before the first request finishes, and kept if the API cannot be reached, so the
+// footer never flashes an empty column. These are Zoo Road's details, the home branch.
+const RESTAURANT_FALLBACK: Restaurant = {
+  name: 'Rashko Restaurant',
+  phone: '+234 808 803 8055',
+  email: null,
+  address: '7B Zoo Road, Albasa, Kano 700103',
+  hours: 'Daily, 12:00 PM – 11:00 PM',
+}
+
+/**
+ * Contact details for the footer. Admin → Settings is the source of truth; anything left
+ * blank there falls back to the Zoo Road branch, so the site keeps showing verified details
+ * while the restaurant is still filling the form in.
+ */
+export function useRestaurant() {
+  const [restaurant, setRestaurant] = useState<Restaurant>(RESTAURANT_FALLBACK)
+  useEffect(() => {
+    let live = true
+    Promise.all([
+      api<{ restaurant: { name: string; phone: string | null; email: string | null; address: string | null } }>('/settings'),
+      loadBranches().catch(() => null),
+    ])
+      .then(([settings, branches]) => {
+        if (!live) return
+        const s = settings.restaurant
+        const home = branches?.find((b) => b.slug === 'zoo-road') ?? branches?.[0] ?? null
+        setRestaurant({
+          name: s.name?.trim() || RESTAURANT_FALLBACK.name,
+          phone: s.phone?.trim() || home?.phone || null,
+          email: s.email?.trim() || null,
+          address: s.address?.trim() || home?.address || null,
+          hours: home?.hours ?? null,
+        })
+      })
+      .catch(() => { /* keep the fallback: the footer is not worth an error message */ })
+    return () => { live = false }
+  }, [])
+  return restaurant
+}
+
 export const featuredOf = (menu: Menu | null): MenuItem[] =>
   menu ? menu.categories.flatMap((c) => c.items).filter((i) => i.featured) : []
