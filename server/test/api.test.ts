@@ -28,7 +28,7 @@ process.env.SEED_ADMIN_PASSWORD = 'AdminPass123!'
 
 const { pool, q } = await import('../src/db.ts')
 const { seed } = await import('../src/seed.ts')
-const { buildApp } = await import('../src/app.ts')
+const { buildApp, errorHandler } = await import('../src/app.ts')
 
 // Fail with something actionable rather than a raw driver error.
 const testDbName = decodeURIComponent(new URL(testUrl).pathname.replace(/^\//, ''))
@@ -297,7 +297,7 @@ test('order creation is rate limited per client', async () => {
   // @ts-expect-error query string forces a fresh module instance with the new limit
   const mod = await import('../src/routes/public.ts?limit')
   const express = (await import('express')).default
-  const app = express(); app.use(express.json()); app.use('/api', mod.pub)
+  const app = express(); app.use(express.json()); app.use('/api', mod.pub); app.use(errorHandler)
   const s = app.listen(0); const b = `http://127.0.0.1:${(s.address() as any).port}`
   const codes: number[] = []
   for (let i = 0; i < 5; i++) {
