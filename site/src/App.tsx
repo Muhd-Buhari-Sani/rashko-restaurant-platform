@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import { FoodDetail, MenuPage } from './pages/Menu'
 import { About, Branches, Contact, Gallery, NotFound } from './pages/Info'
+import { Privacy, Refunds, Terms } from './pages/Legal'
 import { Cart, Checkout } from './pages/CartCheckout'
 import { MockPayment, OrderPage } from './pages/Payment'
 
@@ -26,6 +27,9 @@ export default function App() {
         <Route path="order" element={<OrderPage />} />
         <Route path="order/:code" element={<OrderPage />} />
         <Route path="contact" element={<Contact />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="terms" element={<Terms />} />
+        <Route path="refunds" element={<Refunds />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

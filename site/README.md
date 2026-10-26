@@ -23,7 +23,7 @@ Deploy `dist/` to Netlify (build command `npm run build`, publish directory `dis
 - `src/data.ts`: branches and both menus (prices come from here). Unverified branch details are `null` and shown as "To be confirmed".
 - `src/store.tsx`: cart and branch selection. The cart belongs to one branch; switching branch asks first and empties the cart.
 - `src/hooks.ts`: entrance reveal, 3D tilt and parallax (all respect reduced-motion).
-- `src/pages/`: Home, Menu (+ dish detail), Cart/Checkout, and Info (About, Branches, Gallery, Contact).
+- `src/pages/`: Home, Menu (+ dish detail), Cart/Checkout, Info (About, Branches, Gallery, Contact), and Legal (Privacy, Terms, Refunds).
 - `src/admin/`: the admin dashboard (orders, menu, payments, customers, staff, settings).
 
 ## If the dev server shows a blank page or an error screen
@@ -52,7 +52,7 @@ on that order, and `/order/:code` confirms it. The message itself is sent by the
 kitchen changes the order status (see the server README for the Meta template setup).
 
 ## Still to do
-- Reservations and the policy pages are not built.
+- Reservations are not built.
 - Dish photos: `public/images/dishes/<slug>.jpg` is used automatically when the API has no
   uploaded photo for that dish, so adding a file is all it takes to fill a placeholder.
 

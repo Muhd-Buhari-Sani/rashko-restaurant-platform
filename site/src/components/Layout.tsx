@@ -396,8 +396,15 @@ function Footer() {
           </address>
         </div>
       </div>
-      <div className="border-t border-sand/15 px-5 py-5 text-center text-xs text-sand/60">
-        © {YEAR} {restaurant.name}.
+      <div className="border-t border-sand/15 px-5 py-5 text-xs text-sand/60">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 md:flex-row">
+          <p>© {YEAR} {restaurant.name}. All rights reserved.</p>
+          <nav aria-label="Policies" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <Link to="/privacy" className="transition hover:text-ivory">Privacy</Link>
+            <Link to="/terms" className="transition hover:text-ivory">Terms</Link>
+            <Link to="/refunds" className="transition hover:text-ivory">Refunds</Link>
+          </nav>
+        </div>
       </div>
     </footer>
   )

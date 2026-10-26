@@ -238,6 +238,12 @@ export function Checkout() {
                 : 'Secure card payment by Paystack.'
               : 'Demo mode — no card is charged.'}
           </p>
+          <p className="mt-2 text-center text-xs text-moss/60">
+            By placing this order you agree to our{' '}
+            <Link to="/terms" className="font-semibold text-brand-dark hover:underline">terms</Link>
+            {' '}and{' '}
+            <Link to="/refunds" className="font-semibold text-brand-dark hover:underline">refund policy</Link>.
+          </p>
           <p className="mt-4 text-center text-xs text-moss/60">
             Already placed an order?{' '}
             <button type="button" onClick={() => navigate('/order')} className="font-semibold text-brand-dark hover:underline">Track it here</button>
