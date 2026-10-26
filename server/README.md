@@ -10,7 +10,15 @@ Node + Express + TypeScript + PostgreSQL. Serves the public website and the admi
 4. `npm run seed`   (creates tables, loads branches + menus from `../site/src/data.ts`, creates the first administrator)
 5. `npm run dev`    (API on http://localhost:4000)
 
-`npm test` runs 17 integration tests against a separate `rashko_test` database (it wipes that database).
+`npm test` runs 17 integration tests. They need a **separate** database, because the suite drops
+and recreates the schema: it uses `TEST_DATABASE_URL` if set, otherwise your `DATABASE_URL` with
+`_test` appended (`rashko` → `rashko_test`), and refuses to run unless that name ends in `_test`.
+Create it once, as a superuser, then run the tests:
+
+```bash
+createdb rashko_test
+npm test
+```
 Keep the `server` and `site` folders side by side: the seed reads the menu from the site.
 
 ## Rules the server enforces
@@ -47,5 +55,11 @@ Cancelling a paid order marks it `refund_due`; an administrator records the refu
 
 ## Before going live
 - Set `NODE_ENV=production`, a long random `JWT_SECRET`, `PAYMENT_PROVIDER=paystack`, `PAYSTACK_SECRET_KEY`, and add the webhook URL `https://<api-host>/api/webhooks/paystack` in the Paystack dashboard. The Paystack calls are written from its documented API but have not been run against a live account: do a test-mode order first.
+- Set `TRUST_PROXY` to the number of proxies in front of the API (usually `1`). It is off by
+  default because the rate limiters identify clients by IP: trusting `X-Forwarded-For` when no
+  proxy sets it lets anyone rotate the header and bypass every limit, including the login limit
+  that guards against password guessing.
+- Keep `NODE_ENV=production`: it is what disables the development mock-payment endpoint (which
+  marks orders paid without money moving) and refuses to start with `PAYMENT_PROVIDER=mock`.
 - WhatsApp: `console` just logs. `cloud` sends plain text through Meta's WhatsApp Cloud API, which only delivers to numbers that messaged the business in the last 24 hours; for reliable alerts, register an approved message template.
 - Change the seeded administrator password.

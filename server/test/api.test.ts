@@ -2,7 +2,24 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Server } from 'node:http'
 
-process.env.DATABASE_URL = 'postgres://rashko:rashko@localhost:5432/rashko_test'
+import 'dotenv/config'
+
+// These tests DROP and recreate the schema, so they must never touch the real database.
+// Set TEST_DATABASE_URL, or let it derive by appending "_test" to DATABASE_URL's database
+// name (e.g. rashko -> rashko_test). The name is checked so a mistake cannot wipe live data.
+const testUrl = (() => {
+  if (process.env.TEST_DATABASE_URL) return process.env.TEST_DATABASE_URL
+  const u = new URL(process.env.DATABASE_URL ?? 'postgres://rashko:rashko@localhost:5432/rashko')
+  const name = decodeURIComponent(u.pathname.replace(/^\//, ''))
+  u.pathname = '/' + (name.endsWith('_test') ? name : `${name}_test`)
+  return u.toString()
+})()
+if (!/_test(\?|$)/.test(testUrl)) {
+  throw new Error(`Refusing to run: the test database name must end in _test (got ${testUrl.replace(/:[^:@/]*@/, ':***@')})`)
+}
+console.log(`test database: ${testUrl.replace(/:[^:@/]*@/, ':***@')}`)
+
+process.env.DATABASE_URL = testUrl
 process.env.PAYMENT_PROVIDER = 'mock'
 process.env.ORDER_RATE_LIMIT = '1000'
 process.env.WHATSAPP_PROVIDER = 'console'
@@ -12,6 +29,22 @@ process.env.SEED_ADMIN_PASSWORD = 'AdminPass123!'
 const { pool, q } = await import('../src/db.ts')
 const { seed } = await import('../src/seed.ts')
 const { buildApp } = await import('../src/app.ts')
+
+// Fail with something actionable rather than a raw driver error.
+const testDbName = decodeURIComponent(new URL(testUrl).pathname.replace(/^\//, ''))
+try {
+  await q('select 1')
+} catch (e: any) {
+  if (e?.code === '3D000') {
+    throw new Error(`The test database "${testDbName}" does not exist. Create it once, e.g.:\n`
+      + `  createdb ${testDbName}\n`
+      + 'or point TEST_DATABASE_URL at an existing throwaway database.')
+  }
+  if (e?.code === '28P01' || e?.code === '28000') {
+    throw new Error(`Cannot log in to "${testDbName}". Check the credentials in DATABASE_URL or TEST_DATABASE_URL.`)
+  }
+  throw e
+}
 
 let server: Server
 let base = ''

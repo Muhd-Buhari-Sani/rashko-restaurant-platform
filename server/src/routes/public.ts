@@ -82,7 +82,9 @@ pub.get('/payments/verify/:reference', trackLimit, async (req, res) => {
 })
 
 // Development helper so the whole flow can be tried without a payment provider.
-if (config.paymentProvider === 'mock') {
+// Never mounted in production, even if the provider is misconfigured back to "mock":
+// it would let anyone mark an unpaid order as paid.
+if (config.paymentProvider === 'mock' && !config.prod) {
   pub.post('/payments/mock/:reference', async (req, res) => {
     const result = req.body?.result === 'failed' ? 'failed' : 'success'
     const rows = await q(`update payments set raw = jsonb_build_object('mock', $2::text) where reference = $1 and status = 'pending' returning id`,

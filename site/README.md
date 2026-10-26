@@ -23,7 +23,8 @@ Deploy `dist/` to Netlify (build command `npm run build`, publish directory `dis
 - `src/data.ts`: branches and both menus (prices come from here). Unverified branch details are `null` and shown as "To be confirmed".
 - `src/store.tsx`: cart and branch selection. The cart belongs to one branch; switching branch asks first and empties the cart.
 - `src/hooks.ts`: entrance reveal, 3D tilt and parallax (all respect reduced-motion).
-- `src/pages/`: Home, Menu (+ dish detail), Branches, About, Gallery, Contact, Cart, Checkout.
+- `src/pages/`: Home, Menu (+ dish detail), Cart/Checkout, and Info (About, Branches, Gallery, Contact).
+- `src/admin/`: the admin dashboard (orders, menu, payments, customers, staff, settings).
 
 ## If the dev server shows a blank page or an error screen
 
@@ -32,9 +33,16 @@ Deploy `dist/` to Netlify (build command `npm run build`, publish directory `dis
 3. Run `npm run dev` again.
 4. Still broken? Delete `node_modules` and `package-lock.json`, run `npm install`, then `npm run dev`, and note the message shown on screen or in the browser console (F12).
 
-## Not built yet (needs the backend phase)
+## Backend is connected
 
-Online payment, real order records, order confirmation and tracking, reservations, admin dashboard, WhatsApp notifications, policy pages. The checkout button says plainly that payment is not connected, and nothing is sent or charged.
+Orders, payments, order tracking, the admin dashboard and WhatsApp notifications are all served
+by `../server` (see `../server/README.md`). Locally the payment provider is `mock`: checkout
+records an order but no money moves.
+
+## Still to do
+- Reservations and the policy pages are not built.
+- Dish photos: `public/images/dishes/<slug>.jpg` is used automatically when the API has no
+  uploaded photo for that dish, so adding a file is all it takes to fill a placeholder.
 
 ## To do before launch
 

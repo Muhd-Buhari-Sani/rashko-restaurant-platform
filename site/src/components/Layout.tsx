@@ -15,6 +15,10 @@ import {
   TrashIcon,
 } from './ui'
 
+// Computed once at module load: calling Date during render is impure and
+// can produce different output across re-renders.
+const YEAR = new Date().getFullYear()
+
 const links = [
   { to: '/', label: 'Home' },
   { to: '/menu', label: 'Menu' },
@@ -385,7 +389,7 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-sand/15 px-5 py-5 text-center text-xs text-sand/60">
-        © {new Date().getFullYear()} Rashko Restaurant.
+        © {YEAR} Rashko Restaurant.
       </div>
     </footer>
   )

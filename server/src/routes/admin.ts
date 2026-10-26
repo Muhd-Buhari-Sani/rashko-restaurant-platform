@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { one, q, tx } from '../db.ts'
 import { HttpError, slugify } from '../util.ts'
-import { allow, assertBranch, authenticate, scopeBranch, signToken } from '../auth.ts'
+import { allow, assertBranch, authenticate, authenticateStream, scopeBranch, signToken } from '../auth.ts'
 import { addClient } from '../events.ts'
 import { changeStatus } from '../orders.ts'
 import { getSettings, putSettings } from '../settings.ts'
@@ -31,11 +31,9 @@ admin.post('/auth/login', loginLimit, async (req, res) => {
   res.json({ token: signToken(staff), user: { ...staff, email: u.email } })
 })
 
-admin.use(authenticate)
-
-admin.get('/me', (req, res) => res.json(req.staff))
-
-admin.get('/events', allow(...ALL), (req, res) => {
+// The event stream is mounted BEFORE the blanket authenticate() below, because EventSource
+// cannot send an Authorization header and has to pass ?token= instead.
+admin.get('/events', authenticateStream, allow(...ALL), (req, res) => {
   res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
   res.flushHeaders()
   res.write('event: ready\ndata: {}\n\n')
@@ -43,6 +41,10 @@ admin.get('/events', allow(...ALL), (req, res) => {
   res.on('close', () => clearInterval(keep))
   addClient(res, scopeBranch(req))
 })
+
+admin.use(authenticate)
+
+admin.get('/me', (req, res) => res.json(req.staff))
 
 // ---------- overview ----------
 admin.get('/overview', allow(...ALL), async (req, res) => {

@@ -14,18 +14,39 @@ declare module 'express-serve-static-core' {
 export const signToken = (s: Staff) =>
   jwt.sign({ sub: s.id, role: s.role, branchId: s.branchId, name: s.name }, config.jwtSecret, { expiresIn: '12h' })
 
+const bearer = (req: Request) => {
+  const h = req.headers.authorization
+  return h?.startsWith('Bearer ') ? h.slice(7) : null
+}
+
 /** Verifies the token AND re-checks the account, so deactivating a user cuts access immediately. */
+async function resolveStaff(token: string | null): Promise<Staff> {
+  if (!token) throw new HttpError(401, 'Sign in required')
+  let p: any
+  try { p = jwt.verify(token, config.jwtSecret) } catch { throw new HttpError(401, 'Session expired, sign in again') }
+  const u = await one<{ id: number; role: Role; branch_id: number | null; name: string; active: boolean }>(
+    'select id, role, branch_id, name, active from admin_users where id = $1', [p.sub])
+  if (!u || !u.active) throw new HttpError(401, 'Account is not active')
+  return { id: u.id, role: u.role, branchId: u.branch_id, name: u.name }
+}
+
+/** Header-only. Used everywhere except the event stream, so tokens stay out of URLs. */
 export async function authenticate(req: Request, _res: Response, next: NextFunction) {
   try {
-    const h = req.headers.authorization
-    const token = h?.startsWith('Bearer ') ? h.slice(7) : typeof req.query.token === 'string' ? req.query.token : null
-    if (!token) throw new HttpError(401, 'Sign in required')
-    let p: any
-    try { p = jwt.verify(token, config.jwtSecret) } catch { throw new HttpError(401, 'Session expired, sign in again') }
-    const u = await one<{ id: number; role: Role; branch_id: number | null; name: string; active: boolean }>(
-      'select id, role, branch_id, name, active from admin_users where id = $1', [p.sub])
-    if (!u || !u.active) throw new HttpError(401, 'Account is not active')
-    req.staff = { id: u.id, role: u.role, branchId: u.branch_id, name: u.name }
+    req.staff = await resolveStaff(bearer(req))
+    next()
+  } catch (e) { next(e) }
+}
+
+/**
+ * Also accepts ?token=, because EventSource cannot send an Authorization header.
+ * Only for the server-sent event route: a token in a URL leaks into proxy logs,
+ * browser history and Referer headers.
+ */
+export async function authenticateStream(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const q = typeof req.query.token === 'string' ? req.query.token : null
+    req.staff = await resolveStaff(bearer(req) ?? q)
     next()
   } catch (e) { next(e) }
 }

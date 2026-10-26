@@ -61,7 +61,7 @@ function load(): Saved {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const initial = useRef(load()).current
+  const [initial] = useState(load) // lazy: read localStorage once, not on every render
   const { branches, error: branchesError } = useBranches()
   const [branchSlug, setBranchSlug] = useState<string | null>(initial.branch)
   const [lines, setLines] = useState<CartLine[]>(initial.lines)

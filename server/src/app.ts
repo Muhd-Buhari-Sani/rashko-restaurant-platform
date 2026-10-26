@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 export function buildApp() {
   const app = express()
-  app.set('trust proxy', 1)
+  app.set('trust proxy', config.trustProxy)
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
   app.use(cors({ origin: config.corsOrigins }))
   app.use('/uploads', express.static(join(dirname(fileURLToPath(import.meta.url)), '..', 'uploads')))
@@ -27,6 +27,7 @@ export function buildApp() {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, details: err.details })
     if (err instanceof ZodError) return res.status(400).json({ error: 'Invalid input', details: err.flatten() })
     if ((err as any)?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' })
+    if ((err as any)?.type === 'entity.too.large') return res.status(413).json({ error: 'That request is too large' })
     if ((err as any)?.code === '23505') return res.status(409).json({ error: 'That already exists' })
     if ((err as any)?.code === '23503') return res.status(409).json({ error: 'That is still in use' })
     console.error(err)

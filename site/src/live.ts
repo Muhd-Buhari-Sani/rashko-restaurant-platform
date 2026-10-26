@@ -97,8 +97,10 @@ export function useBranchMenu(slug: string | null | undefined) {
             name: c.name,
             blurb: c.blurb,
             items: c.items.map((i: any): MenuItem => {
-              const imageUrl = i.imageUrl ? imageSrc(i.imageUrl) : null
-              console.log(`[menu] ${i.name} → raw imageUrl="${i.imageUrl}" → final="${imageUrl}"`)
+              // Photos uploaded through the admin dashboard live on the API; otherwise fall
+              // back to the site's own photo for this dish (public/images/dishes/<slug>.jpg).
+              // Photo falls back to the placeholder if that file is missing too.
+              const imageUrl = i.imageUrl ? imageSrc(i.imageUrl) : `/images/dishes/${i.slug}.jpg`
               return {
                 id: i.slug, slug: i.slug, name: i.name, price: i.price,
                 note: i.note,
