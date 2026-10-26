@@ -51,6 +51,33 @@ if (paymentProvider === 'paystack') {
   }
 }
 
+const whatsappProviderRaw = (env.WHATSAPP_PROVIDER ?? 'console').trim().toLowerCase()
+if (whatsappProviderRaw !== 'console' && whatsappProviderRaw !== 'cloud') {
+  throw new Error(`WHATSAPP_PROVIDER must be "console" or "cloud" (got "${whatsappProviderRaw}")`)
+}
+const whatsappProvider = whatsappProviderRaw as 'console' | 'cloud'
+const whatsappToken = (env.WHATSAPP_TOKEN ?? '').trim()
+const whatsappPhoneId = (env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim()
+
+if (whatsappProvider === 'cloud' && (!whatsappToken || !whatsappPhoneId)) {
+  throw new Error('WHATSAPP_PROVIDER=cloud needs WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID from the Meta app dashboard. '
+    + 'Use WHATSAPP_PROVIDER=console to only log messages locally.')
+}
+
+/** Meta template names are lowercase letters, digits and underscores. */
+function templateName(key: string, fallback: string): string {
+  const v = (env[key] ?? fallback).trim() || fallback
+  if (!/^[a-z0-9_]+$/.test(v)) {
+    throw new Error(`${key} must be a lowercase WhatsApp template name (letters, digits, underscores), got "${v}"`)
+  }
+  return v
+}
+
+const whatsappTemplateLang = (env.WHATSAPP_TEMPLATE_LANG ?? 'en').trim() || 'en'
+if (!/^[a-z]{2,3}(_[A-Z]{2})?$/.test(whatsappTemplateLang)) {
+  throw new Error(`WHATSAPP_TEMPLATE_LANG must look like "en" or "en_US" (got "${whatsappTemplateLang}")`)
+}
+
 export const config = {
   prod,
   port: Number(env.PORT ?? 4000),
@@ -72,9 +99,20 @@ export const config = {
   paystackSecret,
   // Overridable so the Paystack client can be exercised against a stub in tests.
   paystackApiBase: (env.PAYSTACK_API_BASE ?? 'https://api.paystack.co').replace(/\/+$/, ''),
-  whatsappProvider: (env.WHATSAPP_PROVIDER ?? 'console') as 'console' | 'cloud',
-  whatsappToken: env.WHATSAPP_TOKEN ?? '',
-  whatsappPhoneId: env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+  whatsappProvider,
+  whatsappToken,
+  whatsappPhoneId,
+  // Overridable so the Cloud API contract can be exercised against a stub in tests.
+  whatsappApiBase: (env.WHATSAPP_API_BASE ?? 'https://graph.facebook.com/v26.0').replace(/\/+$/, ''),
+  whatsappTemplateLang,
+  // Customer updates go out as templates: Meta rejects free-form business messages
+  // outside a 24-hour conversation, and an order update is always the first contact.
+  whatsappTemplates: {
+    ready: templateName('WHATSAPP_TEMPLATE_READY', 'rashko_order_ready'),
+    out_for_delivery: templateName('WHATSAPP_TEMPLATE_OUT_FOR_DELIVERY', 'rashko_order_out_for_delivery'),
+    completed: templateName('WHATSAPP_TEMPLATE_COMPLETED', 'rashko_order_completed'),
+    cancelled: templateName('WHATSAPP_TEMPLATE_CANCELLED', 'rashko_order_cancelled'),
+  },
 }
 
 if (prod && config.paymentProvider === 'mock') {

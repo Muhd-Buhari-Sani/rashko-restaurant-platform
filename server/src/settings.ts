@@ -3,14 +3,16 @@ import { one, q, type Db, pool } from './db.ts'
 export interface Settings {
   restaurant: { name: string; phone: string | null; email: string | null; address: string | null }
   delivery: { defaultFee: number | null; freeAbove: number | null }
-  notifications: { whatsappEnabled: boolean; recipients: string[] }
+  notifications: { whatsappEnabled: boolean; recipients: string[]; customerUpdates: boolean }
 }
 
 export const DEFAULTS: Settings = {
   restaurant: { name: 'Rashko Restaurant', phone: null, email: null, address: null },
   // null = not decided yet. Delivery orders are refused until a fee is set.
   delivery: { defaultFee: null, freeAbove: null },
-  notifications: { whatsappEnabled: false, recipients: [] },
+  // customerUpdates is on by default, but only ever messages customers who ticked the
+  // box at checkout. Staff alerts stay off until recipients are entered.
+  notifications: { whatsappEnabled: false, recipients: [], customerUpdates: true },
 }
 
 export async function getSettings(db: Db = pool): Promise<Settings> {

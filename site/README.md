@@ -46,7 +46,10 @@ reference the same page asks for the phone number used at checkout, and `/order`
 tracking form. Adding a Paystack secret key to `../server/.env` switches checkout to Paystack's
 own page (test key = test mode, live key = live payments) and the `?ref=…` on the callback URL
 lets the order page verify the payment when the browser returns. Checkout asks for an email
-whenever Paystack is active, because Paystack needs one for the receipt.
+whenever Paystack is active, because Paystack needs one for the receipt. Checkout also offers
+a WhatsApp updates opt-in when the server has customer updates enabled; the choice is stored
+on that order, and `/order/:code` confirms it. The message itself is sent by the API when the
+kitchen changes the order status (see the server README for the Meta template setup).
 
 ## Still to do
 - Reservations and the policy pages are not built.

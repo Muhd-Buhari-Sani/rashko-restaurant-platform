@@ -390,7 +390,11 @@ admin.put('/settings', allow('administrator'), async (req, res) => {
   const b = parse(z.object({
     restaurant: z.object({ name: z.string().trim().min(2).max(80), phone: z.string().max(40).nullable(), email: z.string().email().nullable(), address: z.string().max(300).nullable() }).partial(),
     delivery: z.object({ defaultFee: z.number().int().min(0).nullable(), freeAbove: z.number().int().min(0).nullable() }).partial(),
-    notifications: z.object({ whatsappEnabled: z.boolean(), recipients: z.array(z.string().regex(/^\+\d{10,15}$/, 'Use international format, e.g. +2348012345678')).max(10) }).partial(),
+    notifications: z.object({
+      whatsappEnabled: z.boolean(),
+      recipients: z.array(z.string().regex(/^\+\d{10,15}$/, 'Use international format, e.g. +2348012345678')).max(10),
+      customerUpdates: z.boolean(),
+    }).partial(),
   }).partial(), req.body)
   const cur = await getSettings()
   res.json(await putSettings({

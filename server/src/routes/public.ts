@@ -48,6 +48,12 @@ pub.get('/settings', async (_req, res) => {
     restaurant: s.restaurant,
     delivery: { freeAbove: s.delivery.freeAbove },
     payments: { provider: config.paymentProvider, testMode: config.paymentTestMode },
+    // Whether checkout should offer WhatsApp updates. With the console provider the
+    // messages are only logged, so the site can say so instead of promising delivery.
+    notifications: {
+      whatsappUpdates: s.notifications.customerUpdates && (config.whatsappProvider === 'cloud' || !config.prod),
+      simulated: config.whatsappProvider !== 'cloud',
+    },
   })
 })
 
@@ -64,7 +70,7 @@ pub.post('/orders', orderLimit, async (req, res) => {
 async function trackable(code: string, phone: string) {
   const o = await one<any>(
     `select o.id, o.code, o.type, o.status, o.payment_status "paymentStatus", o.subtotal, o.delivery_fee "deliveryFee", o.total,
-            o.created_at "createdAt", o.delivery_address "deliveryAddress", o.customer_phone, b.name branch
+            o.created_at "createdAt", o.delivery_address "deliveryAddress", o.whatsapp_opt_in "whatsappOptIn", o.customer_phone, b.name branch
        from orders o join branches b on b.id = o.branch_id where o.code = $1`, [code.toUpperCase()])
   let p: string | null = null
   try { p = normalizePhone(phone) } catch { /* treated as a miss below */ }

@@ -744,7 +744,7 @@ export function Settings() {
 function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void }) {
   const [r, setR] = useState({ name: initial.restaurant.name, phone: initial.restaurant.phone ?? '', email: initial.restaurant.email ?? '', address: initial.restaurant.address ?? '' })
   const [d, setD] = useState({ defaultFee: initial.delivery.defaultFee == null ? '' : String(initial.delivery.defaultFee), freeAbove: initial.delivery.freeAbove == null ? '' : String(initial.delivery.freeAbove) })
-  const [n, setN] = useState({ whatsappEnabled: initial.notifications.whatsappEnabled, recipients: initial.notifications.recipients.join(', ') })
+  const [n, setN] = useState({ whatsappEnabled: initial.notifications.whatsappEnabled, recipients: initial.notifications.recipients.join(', '), customerUpdates: initial.notifications.customerUpdates ?? true })
   const [msg, setMsg] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
   const save = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null)
@@ -752,7 +752,7 @@ function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void 
       await api('/settings', { method: 'PUT', body: {
         restaurant: { name: r.name, phone: r.phone || null, email: r.email || null, address: r.address || null },
         delivery: { defaultFee: numOrNull(d.defaultFee), freeAbove: numOrNull(d.freeAbove) },
-        notifications: { whatsappEnabled: n.whatsappEnabled, recipients: n.recipients.split(",").map((s: string) => s.trim()).filter(Boolean) },
+        notifications: { whatsappEnabled: n.whatsappEnabled, recipients: n.recipients.split(",").map((s: string) => s.trim()).filter(Boolean), customerUpdates: n.customerUpdates },
       } })
       setMsg({ tone: 'info', text: 'Settings saved.' }); onSaved()
     } catch (x) { setMsg({ tone: 'error', text: errText(x) }) }
@@ -778,6 +778,13 @@ function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void 
         <Field label="WhatsApp numbers (international format, comma separated)">
           <Input value={n.recipients} onChange={(e) => setN({ ...n, recipients: e.target.value })} placeholder="+2348012345678" />
         </Field>
+        <label className="flex items-start gap-2 border-t border-ink/10 pt-3 text-sm">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-brand" checked={n.customerUpdates} onChange={(e) => setN({ ...n, customerUpdates: e.target.checked })} />
+          <span>
+            Send customers WhatsApp updates when their order is ready, out for delivery, completed or cancelled
+            <span className="mt-1 block text-xs text-moss/70">Only customers who tick the box at checkout are messaged. Needs Cloud API credentials and approved templates.</span>
+          </span>
+        </label>
       </section>
       {msg && <div className="lg:col-span-3"><Notice tone={msg.tone}>{msg.text}</Notice></div>}
       <div className="lg:col-span-3"><Btn type="submit">Save settings</Btn></div>

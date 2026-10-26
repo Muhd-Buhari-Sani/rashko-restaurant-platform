@@ -23,6 +23,7 @@ interface Track {
   createdAt: string
   branch: string
   deliveryAddress?: string | null
+  whatsappOptIn?: boolean
   items: { name: string; unitPrice: number; qty: number; lineTotal: number }[]
   events: { status: string; at: string }[]
 }
@@ -475,6 +476,9 @@ export function OrderPage() {
                   </span>
                   Updates automatically
                 </p>
+              )}
+              {order.whatsappOptIn && (
+                <p className="mt-1 text-emerald-700">Status updates sent to your WhatsApp</p>
               )}
             </div>
           </div>

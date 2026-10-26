@@ -9,7 +9,7 @@
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/api.test.ts test/paystack.test.ts"
+    "test": "tsx --test test/api.test.ts test/paystack.test.ts test/whatsapp.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

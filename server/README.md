@@ -61,12 +61,58 @@ With no key at all, the server falls back to the demo provider and checkout redi
 `/pay/mock`, which marks the order paid without money moving. That page and its API route are
 never mounted in production.
 
+## Customer WhatsApp updates
+
+Customers can tick **Send my order updates on WhatsApp** at checkout. Consent is stored on
+that order (`orders.whatsapp_opt_in`), never assumed, and can differ from one order to the
+next. When the kitchen moves the order to `ready`, `out_for_delivery`, `completed` or
+`cancelled`, the API texts the customer. `preparing` and other internal steps stay silent,
+and an unpaid order that gets cancelled is not messaged.
+
+The message is always a **template**. Meta rejects free-form business messages outside a
+24-hour conversation, and a status update is normally the first contact.
+
+### One-time Meta setup
+
+1. Create a WhatsApp Business app in Meta for Developers and add a WhatsApp Business
+   Account and phone number.
+2. In **WhatsApp > API Setup**, copy the phone number ID and a permanent access token.
+3. In **WhatsApp > Message Templates**, create four templates in the **Utility** category,
+   language English (`en`), with these bodies (the parameter names are only for Meta's form):
+
+   | Template name | Body |
+   |---|---|
+   | `rashko_order_ready` | Hi {{1}}, your Rashko order {{2}} is ready. We'll keep you posted as it moves along. |
+   | `rashko_order_out_for_delivery` | Hi {{1}}, your Rashko order {{2}} is on its way. |
+   | `rashko_order_completed` | Hi {{1}}, your Rashko order {{2}} is complete. Thank you for choosing Rashko! |
+   | `rashko_order_cancelled` | Hi {{1}}, your Rashko order {{2}} has been cancelled. Reply here if you need anything. |
+
+   Use a name and an order code (e.g. `Sani`, `RSK-ABC123`) as the sample values. Parameter
+   order must be name first, code second.
+4. Set `WHATSAPP_PROVIDER=cloud`, `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` in
+   `server/.env`, then restart the API. If Meta approved different template names, set
+   `WHATSAPP_TEMPLATE_READY`, `_OUT_FOR_DELIVERY`, `_COMPLETED` and `_CANCELLED`; the
+   language is `WHATSAPP_TEMPLATE_LANG` (default `en`).
+5. Tick **Send customers WhatsApp updates…** in admin > Settings. It is on by default;
+   turning it off stops customer messages without touching staff alerts.
+
+With `WHATSAPP_PROVIDER=console` (the default) nothing leaves the machine: messages,
+including the template name and parameters, are printed to the server log and recorded in
+the `notifications` table. Checkout still offers the opt-in in development and says the
+message is only logged. Startup refuses a misconfigured provider: `cloud` without a token
+or phone number ID, an unknown provider name, and malformed template names.
+
+Staff alerts ("each paid order") are plain text. Meta only allows free-form messages inside
+a 24-hour window, so for staff alerts create a template too, or have each staff member
+message the business number once. Customer updates are unaffected because they always use
+templates.
+
 ## Public API
 | | |
 |---|---|
 | GET `/api/branches` | branches, services, delivery/pickup flags |
 | GET `/api/branches/:slug/menu` | categories and dishes for that branch |
-| GET `/api/settings` | public restaurant info plus the payment provider and whether it is in test mode |
+| GET `/api/settings` | public restaurant info, the payment provider/test mode, and whether checkout may offer WhatsApp updates |
 | POST `/api/orders` | `{branch,type,customer:{name,phone,email?},address?,notes?,items:[{slug,qty}]}` → `{code,total,payment:{url,reference}}` |
 | GET `/api/payments/verify/:reference` | call when the customer returns from payment |
 | GET `/api/orders/track/:code?phone=` | order status (needs the phone used) |

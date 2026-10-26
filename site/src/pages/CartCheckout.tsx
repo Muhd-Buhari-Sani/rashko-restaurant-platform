@@ -77,6 +77,8 @@ export function Checkout() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false)
+  const [updates, setUpdates] = useState({ whatsapp: false, simulated: false })
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
   const [shake, setShake] = useState(false)
@@ -89,8 +91,13 @@ export function Checkout() {
   // The payment mode decides whether an email is required and how checkout is labelled.
   useEffect(() => {
     let live = true
-    api<{ delivery: { freeAbove: number | null }; payments?: { provider: 'mock' | 'paystack'; testMode: boolean } }>('/settings')
-      .then((s) => { if (live) { setFreeAbove(s.delivery.freeAbove); setPayments(s.payments ?? null) } })
+    api<{ delivery: { freeAbove: number | null }; payments?: { provider: 'mock' | 'paystack'; testMode: boolean }; notifications?: { whatsappUpdates: boolean; simulated: boolean } }>('/settings')
+      .then((s) => {
+        if (!live) return
+        setFreeAbove(s.delivery.freeAbove)
+        setPayments(s.payments ?? null)
+        setUpdates({ whatsapp: s.notifications?.whatsappUpdates ?? false, simulated: s.notifications?.simulated ?? false })
+      })
       .catch(() => { /* the server is still the authority on the fee */ })
     return () => { live = false }
   }, [])
@@ -125,7 +132,7 @@ export function Checkout() {
         body: {
           branch: branch.slug,
           type: mode,
-          customer: { name, phone, email: email || undefined },
+          customer: { name, phone, email: email || undefined, whatsappOptIn: whatsappOptIn || undefined },
           address: mode === 'delivery' ? address : undefined,
           notes: notes || undefined,
           items: lines.map((l) => ({ slug: l.slug, qty: l.qty })),
@@ -176,6 +183,24 @@ export function Checkout() {
           <label className="block text-sm font-semibold">Phone number
             <input required type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08012345678" className={`${field} mt-1.5 font-normal`} />
           </label>
+          {updates.whatsapp && (
+            <label className="flex items-start gap-3 rounded-2xl bg-cream p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={whatsappOptIn}
+                onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+              />
+              <span>
+                Send my order updates on WhatsApp
+                <span className="mt-1 block text-xs font-normal leading-relaxed text-moss/65">
+                  We'll message this number when your order is ready{updates.simulated
+                    ? '. Demo: the message is logged on the server, not delivered.'
+                    : ' and again when it moves on.'}
+                </span>
+              </span>
+            </label>
+          )}
           <label className="block text-sm font-semibold">Email {paystack ? '' : '(optional)'}
             <input
               type="email"

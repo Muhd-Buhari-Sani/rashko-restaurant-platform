@@ -4,6 +4,7 @@ import { HttpError, normalizePhone, orderCode } from './util.ts'
 import { getSettings } from './settings.ts'
 import { newReference, provider } from './payments.ts'
 import { broadcast } from './events.ts'
+import { notifyCustomerStatus } from './notify.ts'
 
 export const createOrderSchema = z.object({
   branch: z.string().min(1),
@@ -12,6 +13,8 @@ export const createOrderSchema = z.object({
     name: z.string().trim().min(2).max(80),
     phone: z.string().min(7).max(20),
     email: z.string().email().max(120).optional().or(z.literal('')),
+    // Explicit consent for WhatsApp order updates. Missing or false means no messages.
+    whatsappOptIn: z.boolean().optional(),
   }),
   address: z.string().trim().min(5).max(300).optional(),
   notes: z.string().trim().max(300).optional(),
@@ -78,10 +81,11 @@ export async function createOrder(input: z.infer<typeof createOrderSchema>) {
     for (let i = 0; i < 5 && (await one('select 1 from orders where code = $1', [code], c)); i++) code = orderCode()
 
     const o = await one<any>(
-      `insert into orders(code, branch_id, customer_id, type, customer_name, customer_phone, delivery_address, notes, subtotal, delivery_fee, total)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id, code, total`,
+      `insert into orders(code, branch_id, customer_id, type, customer_name, customer_phone, delivery_address, notes, subtotal, delivery_fee, total, whatsapp_opt_in)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning id, code, total`,
       [code, b.id, cust.id, input.type, input.customer.name, phone,
-        input.type === 'delivery' ? input.address : null, input.notes || null, subtotal, fee, total], c)
+        input.type === 'delivery' ? input.address : null, input.notes || null, subtotal, fee, total,
+        input.customer.whatsappOptIn === true], c)
     for (const l of lines) {
       await c.query('insert into order_items(order_id, item_id, name, unit_price, qty, line_total) values ($1,$2,$3,$4,$5,$6)',
         [o.id, l.itemId, l.name, l.unit, l.qty, l.total])
@@ -131,5 +135,8 @@ export async function changeStatus(orderId: number, to: string, staffId: number,
     return { branchId: o.branch_id as number, code: o.code as string, refund }
   })
   broadcast('order.updated', r.branchId, { id: orderId, code: r.code, status: to })
+  // Fire and forget: WhatsApp being slow or down must not hold up the kitchen. The
+  // outcome (including the reason for a failure) is written to the notifications table.
+  void notifyCustomerStatus(orderId, to)
   return r
 }
