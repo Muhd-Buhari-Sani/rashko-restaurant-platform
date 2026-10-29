@@ -58,6 +58,8 @@ if (whatsappProviderRaw !== 'console' && whatsappProviderRaw !== 'cloud') {
 const whatsappProvider = whatsappProviderRaw as 'console' | 'cloud'
 const whatsappToken = (env.WHATSAPP_TOKEN ?? '').trim()
 const whatsappPhoneId = (env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim()
+const whatsappVerifyToken = (env.WHATSAPP_VERIFY_TOKEN ?? '').trim()
+const whatsappAppSecret = (env.WHATSAPP_APP_SECRET ?? '').trim()
 
 if (whatsappProvider === 'cloud' && (!whatsappToken || !whatsappPhoneId)) {
   throw new Error('WHATSAPP_PROVIDER=cloud needs WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID from the Meta app dashboard. '
@@ -102,6 +104,9 @@ export const config = {
   whatsappProvider,
   whatsappToken,
   whatsappPhoneId,
+  // Webhook verification + event handling for Meta WhatsApp Cloud API.
+  whatsappVerifyToken,
+  whatsappAppSecret,
   // Overridable so the Cloud API contract can be exercised against a stub in tests.
   whatsappApiBase: (env.WHATSAPP_API_BASE ?? 'https://graph.facebook.com/v26.0').replace(/\/+$/, ''),
   whatsappTemplateLang,

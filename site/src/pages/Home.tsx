@@ -212,7 +212,10 @@ function BranchesBlock() {
   )
 }
 
+import { usePageTitle } from '../meta'
+
 export default function Home() {
+  usePageTitle(null)
   return (
     <>
       <Hero />

@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Star } from '../components/ui'
+import { usePageTitle } from '../meta'
 import { useRestaurant } from '../live'
 
 // Keep this in step with the copy below. A policy page with a stale date is worse than none.
 const UPDATED = '26 October 2026'
 
 function LegalHead({ eyebrow, title, lede }: { eyebrow: string; title: string; lede: string }) {
+  usePageTitle(title)
   return (
     <section className="pattern-light bg-ink px-5 pb-16 pt-36 text-ivory md:px-8">
       <div className="mx-auto max-w-5xl">

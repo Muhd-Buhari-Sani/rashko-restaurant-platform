@@ -201,11 +201,14 @@ export function SectionTitle({
   title,
   children,
   light = false,
+  as: Heading = 'h2',
 }: {
   eyebrow: string
   title: string
   children?: ReactNode
   light?: boolean
+  /** Page titles should be h1; section headings inside a page stay h2. */
+  as?: 'h1' | 'h2'
 }) {
   return (
     <div className="max-w-2xl">
@@ -214,7 +217,7 @@ export function SectionTitle({
       >
         <Star size={14} /> {eyebrow}
       </p>
-      <h2 className="font-display text-4xl font-semibold md:text-6xl">{title}</h2>
+      <Heading className="font-display text-4xl font-semibold md:text-6xl">{title}</Heading>
       {children && (
         <p className={`mt-4 text-base leading-relaxed md:text-lg ${light ? 'text-sand/80' : 'text-moss/80'}`}>
           {children}

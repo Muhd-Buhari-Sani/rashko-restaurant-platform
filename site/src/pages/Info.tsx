@@ -7,7 +7,7 @@ function PageHead({ eyebrow, title, children }: { eyebrow: string; title: string
   return (
     <section className="pattern-light bg-ink px-5 pb-16 pt-36 text-ivory md:px-8">
       <div className="mx-auto max-w-7xl">
-        <SectionTitle light eyebrow={eyebrow} title={title}>{children}</SectionTitle>
+        <SectionTitle as="h1" light eyebrow={eyebrow} title={title}>{children}</SectionTitle>
       </div>
     </section>
   )

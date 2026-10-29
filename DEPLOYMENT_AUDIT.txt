@@ -1,0 +1,45 @@
+DEPLOYMENT AUDIT
+
+1) Frontend framework & production build
+- Framework: Vite + React 19 + TypeScript + React Router 7 + Tailwind CSS v4
+- Build: npm run build -> tsc -b && vite build (site/dist/)
+- Dev: npm run dev, Preview: npm run preview
+
+2) Backend framework, start command, PORT
+- Framework: Express 5 + TypeScript (ESM)
+- Start: npm run start -> tsx src/index.ts
+- PORT: process.env.PORT ?? 4000 (respects platform PORT)
+
+3) API base URL & localhost hardcoding
+- site/src/api.ts, site/src/admin/api.ts: API = VITE_API_URL ?? 'http://localhost:4000'
+- Images: relative /uploads/... converted to absolute via API
+- Localhost only as fallbacks in dev
+
+4) PostgreSQL connection & env vars
+- pg.Pool with connectionString from DATABASE_URL (default postgres://rashko:rashko@localhost:5432/rashko)
+
+5) Migrations / schema export
+- Auto-runs migrate() on start from server/migrations/*.sql into schema_migrations (001_init.sql, 002_whatsapp_updates.sql)
+- No standalone schema.sql dump
+
+6) Required environment variable NAMES (values redacted)
+Server: NODE_ENV, PORT, TRUST_PROXY, DATABASE_URL, JWT_SECRET, APP_URL, CORS_ORIGIN, PAYMENT_PROVIDER, PAYSTACK_SECRET_KEY, ALLOW_PAYSTACK_TEST_IN_PROD, PAYSTACK_API_BASE, WHATSAPP_PROVIDER, WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_API_BASE, WHATSAPP_TEMPLATE_LANG, WHATSAPP_TEMPLATE_READY, WHATSAPP_TEMPLATE_OUT_FOR_DELIVERY, WHATSAPP_TEMPLATE_COMPLETED, WHATSAPP_TEMPLATE_CANCELLED, HOLD_WHATSAPP_NOTIFICATIONS
+Site: VITE_API_URL
+
+7) Filesystem storage, uploads
+- server/uploads/dishes/ via multer, served at /uploads
+- POST /api/admin/uploads/image (admin, JPEG/PNG/WebP, 3MB)
+- Needs persistent storage on free tiers
+
+8) CORS, cookies, sessions, HTTPS/proxy
+- CORS from CORS_ORIGIN
+- JWT Bearer in Authorization header, stored in sessionStorage (no httpOnly cookies)
+- Helmet enabled, TRUST_PROXY configurable
+- HTTPS needed for webhooks
+
+9) Deployment blockers
+- Ephemeral uploads (need persistent disk or object storage)
+- Must set env vars
+- Managed Postgres + migrations
+- Configure CORS/origins/trust proxy
+- tsx start OK

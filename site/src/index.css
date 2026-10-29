@@ -17,6 +17,10 @@
 
 html {
   scroll-behavior: smooth;
+  /* Entrance animations shift elements sideways by 36px before they enter view. Without
+     this, that shift becomes a horizontal scrollbar on a phone. `clip` (unlike hidden)
+     does not create a scroll container, so the sticky checkout summary still works. */
+  overflow-x: clip;
 }
 
 body {
@@ -26,6 +30,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: clip;
 }
 
 h1,

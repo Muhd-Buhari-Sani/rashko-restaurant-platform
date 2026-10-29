@@ -98,6 +98,11 @@ export function customerTemplate(status: string, optedIn: boolean, paymentStatus
 /** Never throws: a failed notification must not fail the status change that triggered it. */
 export async function notifyCustomerStatus(orderId: number, status: string) {
   try {
+    // Hard kill-switch until after first launch. Set HOLD_WHATSAPP_NOTIFICATIONS=false to re-enable.
+    if ((process.env.HOLD_WHATSAPP_NOTIFICATIONS ?? 'true').toLowerCase() !== 'false') {
+      return
+    }
+
     const s = await getSettings()
     if (!s.notifications.customerUpdates) return
 

@@ -3,11 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import FoodCard from '../components/FoodCard'
 import { ArrowIcon, PinIcon, Photo, Reveal, SearchIcon, Stepper } from '../components/ui'
 import { naira } from '../data'
+import { usePageTitle } from '../meta'
 import { findItem, useBranchMenu } from '../live'
 import { useStore } from '../store'
 
 function ChooseBranchPrompt() {
   const { openPicker } = useStore()
+  usePageTitle('Menu')
   return (
     <div className="mx-auto max-w-2xl px-5 py-32 text-center">
       <Reveal>
@@ -26,6 +28,7 @@ function ChooseBranchPrompt() {
 export function MenuPage() {
   const { branch, openPicker } = useStore()
   const { menu, error } = useBranchMenu(branch?.slug)
+  usePageTitle('Menu')
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
 
@@ -122,6 +125,7 @@ export function FoodDetail() {
   const [qty, setQty] = useState(1)
   const { menu } = useBranchMenu(branch?.slug ?? 'zoo-road')
   const item = findItem(menu, slug)
+  usePageTitle(item?.name ?? 'Menu')
   const preview = !branch
 
   if (!menu) return <div className="px-5 pb-32 pt-44 text-center text-moss/70">Loading…</div>

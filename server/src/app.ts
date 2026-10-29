@@ -4,7 +4,7 @@ import helmet from 'helmet'
 import { ZodError } from 'zod'
 import { config } from './config.ts'
 import { HttpError } from './util.ts'
-import { pub, webhooks } from './routes/public.ts'
+import { pub, webhooks, whatsapp } from './routes/public.ts'
 import { admin } from './routes/admin.ts'
 import { uploads } from './uploads.ts'
 import { dirname, join } from 'node:path'
@@ -33,6 +33,8 @@ export function buildApp() {
   app.use(cors({ origin: config.corsOrigins }))
   app.use('/uploads', express.static(join(dirname(fileURLToPath(import.meta.url)), '..', 'uploads')))
   app.use('/api/webhooks', webhooks) // needs the raw body, so it goes before express.json
+  app.use('/webhooks/whatsapp', whatsapp) // WhatsApp Cloud API webhook (GET verify, POST events)
+  app.use('/api/whatsapp', whatsapp) // also mount under /api for flexibility
   app.use(express.json({ limit: '100kb' }))
   app.use('/api/admin/uploads', uploads)
   app.use('/api/admin', admin)

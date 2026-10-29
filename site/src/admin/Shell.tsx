@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { API, api, clearSession, getSession, setSession, type Role, type Staff } from './api'
 import { LiveCtx, Btn, Field, Input, Notice, card } from './ui'
 import { Overview, Orders, Menu, Branches, Payments, Customers, Settings } from './pages'
+import { enqueueOrderSound, isMuted, markAutoplayUnlocked, unlockAudio } from './sounds'
 
 const ALL: Role[] = ['administrator', 'branch_manager', 'order_manager']
 const MGMT: Role[] = ['administrator', 'branch_manager']
@@ -62,6 +63,7 @@ function Login({ onLogin }: { onLogin: (u: Staff) => void }) {
 function Shell({ user, onLogout }: { user: Staff; onLogout: () => void }) {
   const [tick, setTick] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
+  const [soundBlocked, setSoundBlocked] = useState(false)
 
   // Live feed: new paid orders and status changes reach every open screen without a refresh.
   useEffect(() => {
@@ -74,9 +76,40 @@ function Shell({ user, onLogout }: { user: Staff; onLogout: () => void }) {
       setToast(`New paid order ${d.code}`)
       bump()
       window.setTimeout(() => setToast(null), 6000)
+      try {
+        const willPlay = enqueueOrderSound(d.id)
+        if (!willPlay && !isMuted()) {
+          setSoundBlocked(true)
+          window.setTimeout(() => setSoundBlocked(false), 8000)
+        }
+      } catch {
+        setSoundBlocked(true)
+        window.setTimeout(() => setSoundBlocked(false), 8000)
+      }
     })
     es.addEventListener('order.updated', bump)
     return () => es.close()
+  }, [])
+
+  useEffect(() => {
+    const unlock = () => {
+      markAutoplayUnlocked()
+      unlockAudio()
+      window.removeEventListener('click', unlock)
+      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('touchstart', unlock)
+      window.removeEventListener('mousedown', unlock)
+    }
+    window.addEventListener('click', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    window.addEventListener('touchstart', unlock, { once: true })
+    window.addEventListener('mousedown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('click', unlock)
+      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('touchstart', unlock)
+      window.removeEventListener('mousedown', unlock)
+    }
   }, [])
 
   const can = (roles: Role[]) => roles.includes(user.role)
@@ -117,6 +150,9 @@ function Shell({ user, onLogout }: { user: Staff; onLogout: () => void }) {
         <main className="min-w-0 flex-1 p-4 sm:p-8">
           {toast && (
             <div className="fixed right-4 top-4 z-50 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg">{toast}</div>
+          )}
+          {soundBlocked && !isMuted() && (
+            <div className="fixed right-4 top-16 z-50 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-lg">New order received — sound blocked by browser. Click anywhere to enable.</div>
           )}
           <Routes>
             <Route index element={guard(ALL, <Overview user={user} />)} />

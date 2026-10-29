@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api, fmtDate, imageSrc, money, label, numOrNull, uploadImage, type Staff } from './api'
 import { Badge, Btn, Field, Input, Loading, Notice, PageHead, Select, Stat, Table, card, useFetch } from './ui'
+import { SOUND_OPTIONS, setSelectedSound, testSound, type SoundId } from './sounds'
 
 const isAdmin = (u: Staff) => u.role === 'administrator'
 const errText = (e: unknown) => (e as Error).message
@@ -745,9 +746,30 @@ function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void 
   const [r, setR] = useState({ name: initial.restaurant.name, phone: initial.restaurant.phone ?? '', email: initial.restaurant.email ?? '', address: initial.restaurant.address ?? '' })
   const [d, setD] = useState({ defaultFee: initial.delivery.defaultFee == null ? '' : String(initial.delivery.defaultFee), freeAbove: initial.delivery.freeAbove == null ? '' : String(initial.delivery.freeAbove) })
   const [n, setN] = useState({ whatsappEnabled: initial.notifications.whatsappEnabled, recipients: initial.notifications.recipients.join(', '), customerUpdates: initial.notifications.customerUpdates ?? true })
+  const [notifyMuted, setNotifyMuted] = useState(() => {
+    try {
+      return localStorage.getItem('rashko_admin_notify_muted') === 'true'
+    } catch {
+      return false
+    }
+  })
+  const [selectedSound, setSelectedSoundLocal] = useState<SoundId>(() => {
+    try {
+      const s = localStorage.getItem('rashko_admin_notify_sound') as SoundId | null
+      return s && SOUND_OPTIONS.find((o) => o.id === s) ? s : 'chime1'
+    } catch {
+      return 'chime1'
+    }
+  })
+  const [testing, setTesting] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
   const save = async (e: FormEvent) => {
     e.preventDefault(); setMsg(null)
+    try {
+      localStorage.setItem('rashko_admin_notify_muted', notifyMuted ? 'true' : 'false')
+      localStorage.setItem('rashko_admin_notify_sound', selectedSound)
+      setSelectedSound(selectedSound)
+    } catch {}
     try {
       await api('/settings', { method: 'PUT', body: {
         restaurant: { name: r.name, phone: r.phone || null, email: r.email || null, address: r.address || null },
@@ -756,6 +778,17 @@ function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void 
       } })
       setMsg({ tone: 'info', text: 'Settings saved.' }); onSaved()
     } catch (x) { setMsg({ tone: 'error', text: errText(x) }) }
+  }
+  const doTest = async () => {
+    setTesting(true)
+    try {
+      setSelectedSound(selectedSound)
+      await testSound(selectedSound)
+    } catch (e) {
+      setMsg({ tone: 'error', text: (e as Error).message || 'Could not play sound. Click anywhere on the page first to unlock audio.' })
+    } finally {
+      setTesting(false)
+    }
   }
   return (
     <form onSubmit={save} className="grid gap-6 lg:grid-cols-3">
@@ -785,6 +818,22 @@ function SettingsForm({ initial, onSaved }: { initial: any; onSaved: () => void 
             <span className="mt-1 block text-xs text-moss/70">Only customers who tick the box at checkout are messaged. Needs Cloud API credentials and approved templates.</span>
           </span>
         </label>
+        <div className="border-t border-ink/10 pt-3">
+          <h3 className="mb-2 font-semibold">New order sound</h3>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-4 w-4 accent-brand" checked={!notifyMuted} onChange={(e) => setNotifyMuted(!e.target.checked)} />
+            Play notification sound for new orders
+          </label>
+          <div className="mt-2 space-y-2">
+            <Field label="Sound">
+              <Select value={selectedSound} onChange={(e) => { setSelectedSoundLocal(e.target.value as SoundId); setSelectedSound(e.target.value as SoundId) }}>
+                {SOUND_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </Select>
+            </Field>
+            <Btn type="button" variant="ghost" disabled={testing || notifyMuted} onClick={doTest}>{testing ? 'Playing…' : 'Test sound'}</Btn>
+          </div>
+          <p className="mt-1 text-xs text-moss/70">Short chime/dime (under 2 seconds). If sound is blocked by the browser, you'll see a visible alert. Click anywhere on the page first to unlock audio.</p>
+        </div>
       </section>
       {msg && <div className="lg:col-span-3"><Notice tone={msg.tone}>{msg.text}</Notice></div>}
       <div className="lg:col-span-3"><Btn type="submit">Save settings</Btn></div>

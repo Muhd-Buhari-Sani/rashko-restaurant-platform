@@ -7,6 +7,7 @@ import { HttpError, normalizePhone } from '../util.ts'
 import { createOrder, createOrderSchema } from '../orders.ts'
 import { settle } from '../payments.ts'
 import { getSettings } from '../settings.ts'
+import { notifyNewOrder } from '../notify.ts'
 
 export const pub = Router()
 
@@ -106,6 +107,89 @@ if (config.paymentProvider === 'mock' && !config.prod) {
     res.json({ code: r!.order.code, paymentStatus: r!.payment.status, orderStatus: r!.order.status })
   })
 }
+
+export const whatsapp = Router()
+
+// Support both /webhook and root for flexibility with different Meta configurations
+whatsapp.get('/', (req, res) => {
+  const mode = String(req.query['hub.mode'] ?? '')
+  const token = String(req.query['hub.verify_token'] ?? '')
+  const challenge = String(req.query['hub.challenge'] ?? '')
+
+  if (mode === 'subscribe' && config.whatsappVerifyToken && token === config.whatsappVerifyToken) {
+    return res.status(200).type('text/plain').send(challenge)
+  }
+  if (mode === 'subscribe' && !config.whatsappVerifyToken && challenge) {
+    return res.status(200).type('text/plain').send(challenge)
+  }
+  return res.sendStatus(403)
+})
+
+whatsapp.post('/', raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+  const body = req.body as Buffer
+  if (config.whatsappAppSecret) {
+    const sig = String(req.headers['x-hub-signature-256'] ?? '')
+    const expected = createHmac('sha256', config.whatsappAppSecret).update(body).digest('hex')
+    const a = Buffer.from(sig.replace(/^sha256=/, '')), b = Buffer.from(expected)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return res.sendStatus(401)
+  }
+  try {
+    const evt = JSON.parse(body.toString('utf8'))
+    const obj = evt.entry?.[0]?.changes?.[0]?.value
+    if (obj?.messages?.[0]) {
+      console.log('[whatsapp:webhook] inbound message', obj.messages[0].type)
+    }
+    if (obj?.statuses?.[0]) {
+      console.log('[whatsapp:webhook] status update', obj.statuses[0].status)
+    }
+  } catch {
+    /* ignore parse errors, still acknowledge */
+  }
+  res.sendStatus(200)
+})
+
+// Meta webhook verification (GET). Meta calls this when you configure the webhook URL.
+// The verify token must match WHATSAPP_VERIFY_TOKEN in the app environment.
+whatsapp.get('/webhook', (req, res) => {
+  const mode = String(req.query['hub.mode'] ?? '')
+  const token = String(req.query['hub.verify_token'] ?? '')
+  const challenge = String(req.query['hub.challenge'] ?? '')
+
+  if (mode === 'subscribe' && config.whatsappVerifyToken && token === config.whatsappVerifyToken) {
+    return res.status(200).type('text/plain').send(challenge)
+  }
+  // If no verify token is configured, still respond in dev to help with testing the tunnel.
+  if (mode === 'subscribe' && !config.whatsappVerifyToken && challenge) {
+    return res.status(200).type('text/plain').send(challenge)
+  }
+  return res.sendStatus(403)
+})
+
+// Meta webhook events (POST). We acknowledge quickly; processing can be expanded later.
+// If WHATSAPP_APP_SECRET is set, validate the X-Hub-Signature-256 header.
+whatsapp.post('/webhook', raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+  const body = req.body as Buffer
+  if (config.whatsappAppSecret) {
+    const sig = String(req.headers['x-hub-signature-256'] ?? '')
+    const expected = createHmac('sha256', config.whatsappAppSecret).update(body).digest('hex')
+    const a = Buffer.from(sig.replace(/^sha256=/, '')), b = Buffer.from(expected)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return res.sendStatus(401)
+  }
+  try {
+    const evt = JSON.parse(body.toString('utf8'))
+    // Basic logging for now so it's easy to see events in the server log.
+    const obj = evt.entry?.[0]?.changes?.[0]?.value
+    if (obj?.messages?.[0]) {
+      console.log('[whatsapp:webhook] inbound message', obj.messages[0].type)
+    }
+    if (obj?.statuses?.[0]) {
+      console.log('[whatsapp:webhook] status update', obj.statuses[0].status)
+    }
+  } catch {
+    /* ignore parse errors, still acknowledge */
+  }
+  res.sendStatus(200)
+})
 
 export const webhooks = Router()
 webhooks.post('/paystack', raw({ type: '*/*', limit: '200kb' }), async (req, res) => {
