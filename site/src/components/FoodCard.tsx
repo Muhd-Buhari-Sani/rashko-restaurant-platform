@@ -64,9 +64,19 @@ export default function FoodCard({
               <button
                 type="button"
                 onClick={onAdd}
-                className={`btn w-full !px-2 !py-1.5 text-[10px] leading-tight sm:w-auto sm:!px-2 sm:!py-1.5 sm:text-[11px] md:w-auto md:!px-4 md:!py-2.5 md:text-sm ${added ? 'btn-dark' : 'btn-primary'}`}
+                className={`btn w-full !px-2 !py-1.5 text-[10px] leading-tight whitespace-nowrap sm:w-auto sm:!px-2 sm:!py-1.5 sm:text-[11px] md:w-auto md:!px-4 md:!py-2.5 md:text-sm ${added ? 'btn-dark' : 'btn-primary'}`}
               >
-                {added ? 'Added ✓' : orderable ? (<><PlusIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" /> Add to Cart</>) : 'Choose branch'}
+                {added ? (
+                  <span className="md:inline">Added ✓</span>
+                ) : orderable ? (
+                  <>
+                    <PlusIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                    <span className="md:hidden">Add</span>
+                    <span className="hidden md:inline">Add to Cart</span>
+                  </>
+                ) : (
+                  'Choose branch'
+                )}
               </button>
             </div>
           )}

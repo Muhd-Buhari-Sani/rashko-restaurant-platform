@@ -7,12 +7,14 @@ import { About, Branches, Contact, Gallery, NotFound } from './pages/Info'
 import { Privacy, Refunds, Terms } from './pages/Legal'
 import { Cart, Checkout } from './pages/CartCheckout'
 import { MockPayment, OrderPage } from './pages/Payment'
+import FloatingCartButton from './components/FloatingCartButton'
 
 const AdminRoot = lazy(() => import('./admin/Shell'))
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       <Route path="admin/*" element={<Suspense fallback={null}><AdminRoot /></Suspense>} />
       <Route element={<Layout />}>
         <Route index element={<Home />} />
@@ -32,6 +34,8 @@ export default function App() {
         <Route path="refunds" element={<Refunds />} />
         <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+      </Routes>
+      <FloatingCartButton />
+    </>
   )
 }
