@@ -105,7 +105,7 @@ export function MenuPage() {
               <h2 id={`cat-${c.id}`} className="font-display text-4xl font-semibold md:text-5xl">{c.name}</h2>
               {c.blurb && <p className="mt-2 text-moss/75">{c.blurb}</p>}
             </Reveal>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {c.items.map((it, i) => (
                 <Reveal key={it.id} delay={(i % 3) * 90} className="h-full">
                   <FoodCard item={it} seed={seed++} orderable withStepper />

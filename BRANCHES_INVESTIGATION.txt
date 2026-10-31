@@ -1,0 +1,46 @@
+BRANCHES INVESTIGATION REPORT (Read-Only)
+
+1) Route implementation for GET /api/branches
+- Location: server/src/routes/public.ts
+- Code: pub.get('/branches', async (_req, res) => { const rows = await q(`select slug, name, address, phone, hours, services, services_note "servicesNote", pickup_enabled "pickupEnabled", delivery_enabled "deliveryEnabled", delivery_fee "deliveryFee", min_order "minOrder", exists(select 1 from branch_menu bm where bm.branch_id = b.id) "hasMenu" from branches b where active order by id`); res.json(rows) })
+- Mounted: app.use('/api', pub) in server/src/app.ts => GET /api/branches
+
+2) Authentication / filtering
+- Public, no auth required
+- Filters: WHERE active only
+- Ordered by id
+
+3) Database query and tables
+- Reads branches table (all needed columns)
+- Subquery checks branch_menu existence (hasMenu)
+- No join that drops rows
+
+4) Seed script
+- server/src/seed.ts reads branches/menus from site/src/data.ts
+- Upserts branches by slug, inserts categories/items/branch_menu (branch_menu on conflict do nothing - preserves admin price changes)
+- Creates admin if missing
+- Logs counts
+
+5) Migrations
+- 001_init.sql creates branches table with active/pickup/delivery fields
+- 002_whatsapp_updates.sql adds whatsapp_opt_in to orders
+- Migrations auto-run on server start
+
+6) Frontend API URL & handling
+- site/src/api.ts: API = VITE_API_URL ?? 'http://localhost:4000'
+- site/src/live.ts: loadBranches() calls api('/branches') -> ${API}/api/branches
+- Caches results, handles errors
+
+Comparison Local vs Production
+- Local likely seeded; production DB may be empty or branches inactive/unseeded
+
+Exact likely cause
+Public route filters WHERE active. Most common: production DB has no branches or all branches have active=false. Also possible migrations ran but seed not executed, or wrong DATABASE_URL, or VITE_API_URL pointing elsewhere.
+
+Safest steps to fix (no changes made)
+1. Confirm production DATABASE_URL
+2. Check schema_migrations has 001_init.sql
+3. Verify branches exist and active=true (query DB)
+4. Run seed against production DB if empty (uses site/src/data.ts) or insert branches
+5. Verify VITE_API_URL and CORS
+6. Restart server so migrations run if needed
